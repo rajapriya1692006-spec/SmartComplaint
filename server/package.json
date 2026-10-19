@@ -1,0 +1,26 @@
+{
+  "name": "smartcomplaint-server",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "staff:create-demo": "node scripts/createStaffDemo.js",
+    "admin:create-demo": "node scripts/createAdminDemo.js",
+    "email:verify": "node scripts/emailCheck.js verify",
+    "email:test": "node scripts/emailCheck.js send",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "bcrypt": "latest",
+    "cookie-parser": "latest",
+    "cors": "latest",
+    "dotenv": "latest",
+    "express": "latest",
+    "jsonwebtoken": "latest",
+    "mongoose": "latest",
+    "multer": "^2.4.0",
+    "nodemailer": "^10.1.0"
+  }
+}
