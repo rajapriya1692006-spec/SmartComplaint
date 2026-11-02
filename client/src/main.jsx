@@ -16,7 +16,7 @@ const authErrorMessage = (error) => {
   const status = error.response?.status
   if (error.response?.data?.message) return error.response.data.message
   if (status >= 500) return 'The server could not process your request. Please try again.'
-  if (error.request) return 'Unable to reach the server. Make sure the backend is running at http://localhost:5000.'
+  if (error.request) return 'Unable to reach the server. Please check the configured backend URL and try again.'
   return 'Unable to submit your request. Please try again.'
 }
 
