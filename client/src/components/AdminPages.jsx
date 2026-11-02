@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react'
-import axios from 'axios'
 import {
   Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts'
+import api from '../api'
 import { FiActivity, FiCheckCircle, FiClock, FiFileText, FiUsers } from 'react-icons/fi'
 
-const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api', withCredentials: true })
 const priorities = ['Critical', 'High', 'Medium', 'Low']
 const statuses = ['Submitted', 'AI Analyzed', 'Assigned', 'In Progress', 'Resolved', 'Closed']
 const departments = ['Finance Support', 'Technical Support', 'Delivery/Logistics', 'Product Support', 'Account Support', 'Customer Support', 'Security Team']

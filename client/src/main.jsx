@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import axios from 'axios'
 import { BrowserRouter, Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom'
+import api from './api'
 import { FiActivity, FiArrowRight, FiBarChart2, FiBell, FiBriefcase, FiCheck, FiCheckCircle, FiClock, FiFileText, FiHome, FiLogOut, FiMenu, FiMessageSquare, FiMoon, FiPaperclip, FiPlus, FiRefreshCw, FiSearch, FiSettings, FiShield, FiSun, FiUser, FiUsers, FiX, FiZap } from 'react-icons/fi'
 import './styles.css'
 import TicketDetails from './components/TicketDetails'
@@ -11,7 +11,6 @@ const ThemeContext = createContext()
 const useTheme = () => useContext(ThemeContext)
 const AuthContext = createContext()
 const useAuth = () => useContext(AuthContext)
-const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api', withCredentials: true })
 const dashboardForRole = (role) => role === 'Admin' ? '/admin/dashboard' : role === 'Support Staff' ? '/staff/dashboard' : '/dashboard'
 const authErrorMessage = (error) => {
   const status = error.response?.status

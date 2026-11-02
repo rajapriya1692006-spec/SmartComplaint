@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react'
-import axios from 'axios'
 import { Link, useParams } from 'react-router-dom'
 import { FiArrowLeft, FiArrowRight, FiMessageCircle, FiPaperclip, FiSend } from 'react-icons/fi'
+import api from '../api'
 
-const api = axios.create({ baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api', withCredentials: true })
 const statusFlow = ['Submitted', 'AI Analyzed', 'Assigned', 'In Progress', 'Resolved', 'Closed']
 const formatDate = (value) => value ? new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value)) : 'Historical date unavailable'
 const statusTone = (status) => status === 'Resolved' || status === 'Closed' ? 'green' : status === 'In Progress' ? 'blue' : 'amber'
