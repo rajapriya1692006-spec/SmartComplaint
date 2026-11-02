@@ -2,13 +2,14 @@ import express from 'express'
 import Complaint from '../models/Complaint.js'
 import User from '../models/User.js'
 import { authenticate, authorize } from '../middleware/authMiddleware.js'
-import { analyzeComplaint, fallbackAnalysis } from '../services/aiService.js'
+import { analyzeComplaint, fallbackAnalysis, routeDepartment } from '../services/aiService.js'
 import { buildStatusTimeline } from '../services/statusTimeline.js'
 import { complaintUpload, verifyAttachmentSignature } from '../middleware/complaintUpload.js'
 import { saveAttachment, readAttachment } from '../services/attachmentStorage.js'
 import { canAccessComplaintAttachment, complaintAttachmentLookup } from '../services/attachmentAccess.js'
 import { buildAttachmentHeaders } from '../services/attachmentResponse.js'
 import { notifyComplaint } from '../services/emailService.js'
+import { chooseStaffForDepartment } from '../services/departmentRouting.js'
 
 const router = express.Router()
 const customerOnly = [authenticate, authorize('Customer')]
@@ -18,17 +19,6 @@ const nextTicketId = async () => {
   const latest = await Complaint.findOne().sort({ ticketId: -1 }).select('ticketId').lean()
   const number = latest ? Number(latest.ticketId.replace('CMP-', '')) + 1 : 10001
   return `CMP-${number}`
-}
-
-const chooseStaffForDepartment = async (department) => {
-  const staff = await User.find({ role: 'Support Staff', department }).select('_id').lean()
-  if (!staff.length) return null
-  const active = await Complaint.aggregate([
-    { $match: { assignedTo: { $in: staff.map(({ _id }) => _id) }, status: { $nin: ['Resolved', 'Closed'] } } },
-    { $group: { _id: '$assignedTo', count: { $sum: 1 } } },
-  ])
-  const loads = new Map(active.map(({ _id, count }) => [_id.toString(), count]))
-  return staff.sort((a, b) => (loads.get(a._id.toString()) || 0) - (loads.get(b._id.toString()) || 0))[0]._id
 }
 
 router.post('/', ...customerOnly, (req, res, next) => complaintUpload(req, res, next), async (req, res, next) => {
@@ -79,9 +69,31 @@ router.post('/', ...customerOnly, (req, res, next) => complaintUpload(req, res, 
       analysisFallback = true
       console.error(`[AI] Ollama unavailable or analysis invalid for ${complaint.ticketId}: ${error.message}`)
       console.log('Ollama unavailable - complaint saved without AI analysis.')
-      Object.assign(complaint, { category: fallbackAnalysis.category, priority: fallbackAnalysis.priority, department: fallbackAnalysis.department, confidence: fallbackAnalysis.confidence, aiReason: fallbackAnalysis.explanation, aiStatus: 'Fallback', status: 'Submitted' })
+      const fallbackDepartment = routeDepartment(fallbackAnalysis, complaint.subject, complaint.description)
+      const assignedTo = await chooseStaffForDepartment(fallbackDepartment)
+      const assignedAt = new Date()
+      if (assignedTo) complaint.statusHistory.push({ status: 'Assigned', changedAt: assignedAt })
+      Object.assign(complaint, {
+        category: fallbackAnalysis.category,
+        priority: fallbackAnalysis.priority,
+        department: fallbackDepartment,
+        confidence: fallbackAnalysis.confidence,
+        aiReason: fallbackAnalysis.explanation,
+        aiStatus: 'Fallback',
+        assignedTo,
+        status: assignedTo ? 'Assigned' : 'Submitted',
+      })
       await complaint.save()
-      console.log(`[AI] Fallback saved for ${complaint.ticketId}.`)
+      if (assignedTo) {
+        void notifyComplaint(req.user.email, 'Complaint assigned', complaint, `assigned:${complaint._id}:${assignedTo}`)
+        try {
+          const assignedStaff = await User.findOne({ _id: assignedTo, role: 'Support Staff' }).select('email').lean()
+          if (assignedStaff) void notifyComplaint(assignedStaff.email, 'Complaint assigned', complaint, `assigned:${complaint._id}:${assignedTo}`)
+        } catch (emailLookupError) {
+          console.error(`[Email] Could not look up assigned staff for ${complaint.ticketId}: ${emailLookupError.message}`)
+        }
+      }
+      console.log(`[AI] Fallback saved for ${complaint.ticketId} in ${fallbackDepartment}${assignedTo ? ' and assigned to department staff' : '; awaiting department staff'}.`)
     }
     const safeComplaint = complaint.toObject()
     delete safeComplaint.notificationKeys

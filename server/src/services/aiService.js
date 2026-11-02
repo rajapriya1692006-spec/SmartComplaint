@@ -56,6 +56,31 @@ function validateAnalysis(value) {
   return { category: value.category, priority: value.priority, department: value.department, confidence: Number(confidence.toFixed(2)), explanation: value.explanation.trim().slice(0, 500) }
 }
 
+export function routeDepartment(analysis, subject = '', description = '') {
+  const message = `${subject} ${description}`
+  const securityIssue = analysis.category === 'Security Issue'
+    || /\b(security breach|data leak|data exposure|hacked|unauthori[sz]ed access|account takeover|identity theft|stolen account)\b/i.test(message)
+  if (securityIssue) return 'Security Team'
+
+  const categoryDepartments = {
+    'Payment Issue': 'Finance Support',
+    'Refund Issue': 'Finance Support',
+    'Technical Issue': 'Technical Support',
+    'Delivery Issue': 'Delivery/Logistics',
+    'Product Issue': 'Product Support',
+    'Account/Login Issue': 'Account Support',
+    'Security Issue': 'Security Team',
+  }
+  if (categoryDepartments[analysis.category]) return categoryDepartments[analysis.category]
+
+  if (/\b(pay|paid|payments?|bill|bills|billed|billing|invoices?|refunds?|reimbursements?|charges?|charged|transactions?|debit|debited|deducted|deduction|credit card|bank transfer|wallet)\b/i.test(message)) return 'Finance Support'
+  if (/\b(delivery|shipping|shipment|tracking|package|parcel|courier)\b/i.test(message)) return 'Delivery/Logistics'
+  if (/\b(technical|software|website|mobile app|application|crash|bug|outage|server error)\b/i.test(message)) return 'Technical Support'
+  if (/\b(defective|damaged|broken item|product quality|warranty|faulty product)\b/i.test(message)) return 'Product Support'
+  if (/\b(login|log in|sign in|password|account access|locked out|account recovery)\b/i.test(message)) return 'Account Support'
+  return analysis.department
+}
+
 export async function analyzeComplaint({ subject, description }) {
   const baseUrl = (process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434').replace(/\/+$/, '')
   const model = process.env.OLLAMA_MODEL || 'llama3.2:3b'
@@ -77,7 +102,9 @@ export async function analyzeComplaint({ subject, description }) {
     if (!response.ok) throw new Error(`Ollama request failed (${response.status}).`)
     const payload = await response.json()
     console.log('[AI] Ollama response received.')
-    return validateAnalysis(extractJson(payload.response))
+    const analysis = validateAnalysis(extractJson(payload.response))
+    analysis.department = routeDepartment(analysis, subject, description)
+    return analysis
   } catch (error) {
     if (error.name === 'AbortError') throw new Error('Ollama request timed out.')
     throw error

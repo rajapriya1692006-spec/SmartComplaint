@@ -5,6 +5,7 @@ import { authenticate, authorize } from '../middleware/authMiddleware.js'
 import { buildStatusTimeline } from '../services/statusTimeline.js'
 import User from '../models/User.js'
 import { notifyComplaint } from '../services/emailService.js'
+import { departmentScope } from '../services/departmentRouting.js'
 
 const router = express.Router()
 const staffOnly = [authenticate, authorize('Support Staff')]
@@ -19,10 +20,7 @@ const nextStatus = {
 }
 
 function departmentQuery(user) {
-  if (!user.department?.trim()) return { _id: null }
-  // Match older records that may have been stored with different casing or padding.
-  const departmentPattern = user.department.trim().replace(/\s+/g, '\\s+')
-  return { department: { $regex: `^\\s*${departmentPattern}\\s*$`, $options: 'i' } }
+  return departmentScope(user.department)
 }
 
 router.get('/complaints', ...staffOnly, async (req, res, next) => {

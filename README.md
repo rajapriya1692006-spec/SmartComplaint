@@ -27,7 +27,7 @@ Customer complaints can be difficult to categorize, prioritize, route, and track
 
 ## AI functionality
 
-The backend sends the complaint subject and description to Ollama using `OLLAMA_BASE_URL` and `OLLAMA_MODEL`. It validates the returned category, priority, department, confidence (0-1), and explanation before saving. If Ollama is unavailable or returns invalid output, the complaint remains saved and is marked as a fallback for support review. AI output is a suggestion and can be wrong; staff should review it.
+The backend sends the complaint subject and description to Ollama using `OLLAMA_BASE_URL` and `OLLAMA_MODEL`. It validates the returned category, priority, department, confidence (0-1), and explanation before saving. Department routing is normalized from the validated category and issue keywords, so a model department mismatch does not send a payment, invoice, or refund issue to another queue. The same routing rules apply to fallback analysis, and a matching staff member is assigned when one exists. If Ollama is unavailable or returns invalid output, the complaint remains saved and is marked as a fallback for support review. AI output is a suggestion and can be wrong; staff should review it.
 
 Supported categories include payment, technical, delivery, product, account/login, refund, service, security, general, and other. Supported departments are Finance Support, Technical Support, Delivery/Logistics, Product Support, Account Support, Customer Support, and Security Team.
 
